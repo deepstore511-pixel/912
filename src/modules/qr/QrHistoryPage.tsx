@@ -16,6 +16,7 @@ export function QrHistoryPage() {
   const { t } = useI18n()
   const { id } = useParams<{ id: string }>()
   const profile = useAuth((s) => s.profile)
+  const profileId = profile?.id
   const validId = id !== undefined && /^\d+$/.test(id) ? Number(id) : undefined
   const [apartment, setApartment] = useState<SvApartment | null>(null)
   const [tab, setTab] = useState<Tab>('cleaning')
@@ -24,10 +25,10 @@ export function QrHistoryPage() {
   const [offline, setOffline] = useState(false)
 
   useEffect(() => {
-    if (validId == null || !profile) return
+    if (validId == null || !profileId) return
     setLoading(true)
     setError(null)
-    fetchApartments(profile.id)
+    fetchApartments(profileId)
       .then((all) => {
         setApartment(all.find((a) => a.id === validId) ?? null)
       })
@@ -39,7 +40,7 @@ export function QrHistoryPage() {
         }
       })
       .finally(() => setLoading(false))
-  }, [validId, profile])
+  }, [validId, profileId])
 
   const handleRetry = () => {
     if (validId == null || !profile) return

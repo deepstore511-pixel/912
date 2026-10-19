@@ -8,6 +8,7 @@ import { RefreshCw } from 'lucide-react'
 export function PWAUpdateBanner() {
   const { t } = useI18n()
   const profile = useAuth((s) => s.profile)
+  const profileId = profile?.id
   const [outboxBlocked, setOutboxBlocked] = useState(false)
 
   const {
@@ -18,16 +19,16 @@ export function PWAUpdateBanner() {
   })
 
   useEffect(() => {
-    if (!needRefresh || !profile) return
+    if (!needRefresh || !profileId) return
     let active = true
     const check = async () => {
-      const summary = await getOutboxSummary(profile.id)
+      const summary = await getOutboxSummary(profileId)
       if (active) setOutboxBlocked(summary.pending > 0 || summary.failed > 0)
     }
     check()
     const interval = setInterval(check, 5000)
     return () => { active = false; clearInterval(interval) }
-  }, [needRefresh, profile])
+  }, [needRefresh, profileId])
 
   if (!needRefresh || outboxBlocked) return null
 

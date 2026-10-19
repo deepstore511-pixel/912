@@ -43,6 +43,7 @@ export function QrApartmentPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const profile = useAuth((s) => s.profile)
+  const profileId = profile?.id
   const aptId = Number(id)
 
   const normTypeLabels: Record<NormType, string> = {
@@ -84,10 +85,10 @@ export function QrApartmentPage() {
   const [incidentFileUrls, setIncidentFileUrls] = useState<Map<string, string>>(new Map())
 
   const loadAll = useCallback(async () => {
-    if (!aptId || !profile) return
+    if (!aptId || !profileId) return
     const results = await Promise.allSettled([
       fetchApartment(aptId),
-      fetchNorms(profile.id, aptId),
+      fetchNorms(profileId, aptId),
       fetchItems(),
       fetchNotes(aptId),
       fetchWhatsappContacts(),
@@ -107,7 +108,7 @@ export function QrApartmentPage() {
     setContacts(ct)
     setIncidents(inc)
     setLastUpdated(new Date())
-  }, [aptId, profile])
+  }, [aptId, profileId])
 
   useEffect(() => {
     if (!aptId) return
@@ -115,15 +116,15 @@ export function QrApartmentPage() {
     loadAll()
       .catch((e) => toast(errorMessage(e), 'error'))
       .finally(() => setLoading(false))
-    if (profile) {
+    if (profileId) {
       const refreshOutbox = () => {
-        getOutboxSummary(profile.id).then((s) => {
+        getOutboxSummary(profileId).then((s) => {
           setPendingCount(s.pending)
           setFailedCount(s.failed)
           setMediaFailedCount(s.mediaFailed)
           setMediaPendingCount(s.mediaPending)
         })
-        getOutboxEntries(profile.id).then((entries) => {
+        getOutboxEntries(profileId).then((entries) => {
           setMediaFailedEntries(entries.filter((e) => (e.mediaStatus ?? 'none') === 'failed'))
           setFailedEntries(entries.filter((e) => e.status === 'failed'))
         })
@@ -132,7 +133,7 @@ export function QrApartmentPage() {
       const unsub = subscribe(refreshOutbox)
       return unsub
     }
-  }, [aptId, loadAll, profile])
+  }, [aptId, loadAll, profileId])
 
   useLiveRefresh(
     ['apartments', 'apartment_notes', 'contacts', 'incidents', 'cleaning_events', 'items', 'norm_rules'],

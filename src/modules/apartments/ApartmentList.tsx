@@ -25,6 +25,7 @@ export function ApartmentList() {
   }
   const navigate = useNavigate()
   const profile = useAuth((s) => s.profile)
+  const profileId = profile?.id
   const [apartments, setApartments] = useState<SvApartment[]>([])
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
@@ -41,20 +42,20 @@ export function ApartmentList() {
   const [confirmFailedDeleteId, setConfirmFailedDeleteId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!profile) return
-    fetchApartments(profile.id)
+    if (!profileId) return
+    fetchApartments(profileId)
       .then(setApartments)
       .catch((e) => setLoadError(friendlyMessage(e)))
       .finally(() => setLoading(false))
 
     const refresh = () => {
-      getOutboxSummary(profile.id).then((s) => {
+      getOutboxSummary(profileId).then((s) => {
         setPendingCount(s.pending)
         setFailedCount(s.failed)
         setMediaFailedCount(s.mediaFailed)
         setMediaPendingCount(s.mediaPending)
       })
-      getOutboxEntries(profile.id).then((entries) => {
+      getOutboxEntries(profileId).then((entries) => {
         setFailedEntries(entries.filter((e) => e.status === 'failed'))
         setMediaFailedEntries(entries.filter((e) => (e.mediaStatus ?? 'none') === 'failed'))
       })
@@ -62,7 +63,7 @@ export function ApartmentList() {
     refresh()
     const unsub = subscribe(refresh)
     return unsub
-  }, [profile])
+  }, [profileId])
 
   useLiveRefresh(['apartments', 'cleaning_events', 'norm_rules'], () => {
     if (profile) fetchApartments(profile.id).then(setApartments).catch(() => {})

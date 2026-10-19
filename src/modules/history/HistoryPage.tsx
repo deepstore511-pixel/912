@@ -14,6 +14,7 @@ type Tab = 'cleaning' | 'incidents'
 export function HistoryPage() {
   const { t } = useI18n()
   const profile = useAuth((s) => s.profile)
+  const profileId = profile?.id
   const isAdmin = profile?.role === 'admin'
   const [apartments, setApartments] = useState<SvApartment[]>([])
   const [aptId, setAptId] = useState<number | ''>('')
@@ -22,14 +23,14 @@ export function HistoryPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!profile) return
+    if (!profileId) return
     setLoading(true)
     setError(null)
-    fetchApartments(profile.id)
+    fetchApartments(profileId)
       .then(setApartments)
       .catch((e) => setError(friendlyMessage(e)))
       .finally(() => setLoading(false))
-  }, [profile])
+  }, [profileId])
 
   if (loading) return <div className="px-4 pt-8 text-center text-muted">{t.app.loading}</div>
   if (error) return <ErrorState onRetry={() => { if (profile) { setLoading(true); fetchApartments(profile.id).then(setApartments).catch((e) => setError(friendlyMessage(e))).finally(() => setLoading(false)) } }} />

@@ -45,6 +45,7 @@ export function IncidentForm({ backTo }: { backTo?: string }) {
   const [params] = useSearchParams()
   const preselectApt = params.get('apartment') ?? params.get('apt')
   const profile = useAuth((s) => s.profile)
+  const profileId = profile?.id
   const [apartments, setApartments] = useState<SvApartment[]>([])
   const [items, setItems] = useState<SvItem[]>([])
   const [aptNorms, setAptNorms] = useState<SvNorm[]>([])
@@ -84,11 +85,11 @@ export function IncidentForm({ backTo }: { backTo?: string }) {
   }, [profile?.id])
 
   useEffect(() => {
-    if (!aptId || !profile) return
-    fetchNorms(profile.id, aptId)
+    if (!aptId || !profileId) return
+    fetchNorms(profileId, aptId)
       .then((n) => setAptNorms(n))
       .catch(() => setAptNorms([]))
-  }, [aptId, profile])
+  }, [aptId, profileId])
 
   const normItemIds = useMemo(() => new Set(aptNorms.map((n) => n.item_id)), [aptNorms])
   const normItems = useMemo(() => items.filter((i) => normItemIds.has(i.id)), [items, normItemIds])
