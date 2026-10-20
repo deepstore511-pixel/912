@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuth, homePathForRole, setupAuthListener } from '@/modules/core/store'
 import { BootstrapScreen, LoginScreen } from '@/modules/core/AuthScreens'
@@ -6,6 +6,9 @@ import { SvRoutes, AdminRoutes } from '@/modules/registry'
 import { useI18n, useDocumentDir } from '@/i18n'
 import { Package, RefreshCw } from 'lucide-react'
 import { ToastContainer } from '@/lib/toast'
+import { WelcomePage } from '@/modules/welcome/WelcomePage'
+import { AdminOnlyScreen } from '@/modules/welcome/AdminOnlyScreen'
+import { shouldShowWelcome } from '@/modules/welcome/welcomeState'
 
 function QrRedirect() {
   const location = useLocation()
@@ -33,11 +36,21 @@ function App() {
   const init = useAuth((s) => s.init)
   const retryInit = useAuth((s) => s.retryInit)
   const profile = useAuth((s) => s.profile)
+  const [showWelcome, setShowWelcome] = useState(shouldShowWelcome)
 
   useEffect(() => {
     setupAuthListener()
     init()
   }, [init])
+
+  if (showWelcome) {
+    return (
+      <>
+        <WelcomePage onContinue={() => setShowWelcome(false)} />
+        <ToastContainer />
+      </>
+    )
+  }
 
   let content: React.ReactNode
   if (state === 'loading') {
@@ -68,17 +81,28 @@ function App() {
     content = <LoginScreen />
   } else {
     const home = homePathForRole(profile.role)
-    const role = profile.role
-    content = (
-      <BrowserRouter>
-        <Routes>
-          <Route path="/qr/*" element={<QrRedirect />} />
-          <Route path="/sv/*" element={role === 'admin' || role === 'supervisor' ? <SvRoutes /> : <Navigate to={home} replace />} />
-          <Route path="/admin/*" element={role === 'admin' ? <AdminRoutes /> : <Navigate to={home} replace />} />
-          <Route path="*" element={<Navigate to={home} replace />} />
-        </Routes>
-      </BrowserRouter>
-    )
+    if (profile.role !== 'admin') {
+      // Managers and supervisors work only through apartment QR codes; old /qr links still redirect.
+      content = (
+        <BrowserRouter>
+          <Routes>
+            <Route path="/qr/*" element={<QrRedirect />} />
+            <Route path="*" element={<AdminOnlyScreen onScanner={() => setShowWelcome(true)} />} />
+          </Routes>
+        </BrowserRouter>
+      )
+    } else {
+      content = (
+        <BrowserRouter>
+          <Routes>
+            <Route path="/qr/*" element={<QrRedirect />} />
+            <Route path="/sv/*" element={<SvRoutes />} />
+            <Route path="/admin/*" element={<AdminRoutes />} />
+            <Route path="*" element={<Navigate to={home} replace />} />
+          </Routes>
+        </BrowserRouter>
+      )
+    }
   }
 
   return (
