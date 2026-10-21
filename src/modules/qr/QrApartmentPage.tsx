@@ -17,6 +17,8 @@ import { useAuth } from '@/modules/core/store'
 import { useI18n } from '@/i18n'
 import { formatDateTime, isToday, formatQty } from '@/lib/format'
 import { toast, errorMessage } from '@/lib/toast'
+import { WhatsappNotify } from '@/components/WhatsappNotify'
+import { useNotifyContacts, commentMessage } from '@/lib/whatsappNotify'
 import { getOutboxSummary, getOutboxEntries, subscribe, flushOutbox, retryMediaEntry, discardMediaEntry, retryFailedEntry, deleteFailedEntry, type OutboxEntry } from '@/lib/outbox'
 import {
   CircleCheck as CheckCircle2, Wrench, Search, Send, Camera, Video, X, FileText,
@@ -76,6 +78,8 @@ export function QrApartmentPage() {
   const [detail, setDetail] = useState<DetailState | null>(null)
 
   const [noteText, setNoteText] = useState('')
+  const notifyContacts = useNotifyContacts()
+  const [sentNote, setSentNote] = useState<string | null>(null)
   const [sendingNote, setSendingNote] = useState(false)
   const [uploadingFile, setUploadingFile] = useState(false)
   const photoInputRef = useRef<HTMLInputElement>(null)
@@ -228,8 +232,17 @@ export function QrApartmentPage() {
     if (!noteText.trim() && !photoPath) return
     setSendingNote(true)
     try {
-      await addNote(aptId, noteText.trim() || ' ', photoPath)
+      const body = noteText.trim()
+      await addNote(aptId, body || ' ', photoPath)
       setNoteText('')
+      if (body && apartment && notifyContacts.length > 0) {
+        setSentNote(commentMessage({
+          code: apartment.code,
+          building: apartment.building,
+          author: profile?.full_name ?? null,
+          body,
+        }))
+      }
       const no = await fetchNotes(aptId)
       setNotes(no)
     } catch (e) {
@@ -358,6 +371,12 @@ export function QrApartmentPage() {
 
         {tab === 'comments' && (
           <div className="space-y-3">
+            {sentNote && (
+              <div className="space-y-2">
+                <WhatsappNotify contacts={notifyContacts} text={sentNote} />
+                <button onClick={() => setSentNote(null)} className="w-full bg-app text-ink rounded-xl py-2.5 min-h-[44px] text-sm font-medium">{t.notify.done}</button>
+              </div>
+            )}
             <div className="flex flex-wrap gap-2 mb-3">
               <input
                 value={noteText}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { fetchToOrder, fetchApartmentGaps, fetchShortageEvents, fetchApartmentsAdmin, fetchBuildings, fetchAllIncidents, ackEvents } from '@/modules/admin/api'
+import { fetchToOrder, fetchApartmentGaps, fetchShortageEvents, fetchApartmentsAdmin, fetchBuildings, fetchAllIncidents, fetchPendingCleanings, ackEvents } from '@/modules/admin/api'
 import type { ToOrderRow, ApartmentGapRow, Apartment, Building, AptType, Incident, NormalizedShortageEvent } from '@/lib/database.types'
 import { useI18n } from '@/i18n'
 import { friendlyMessage } from '@/lib/errors'
@@ -36,6 +36,7 @@ export function Dashboard() {
   const [apartments, setApartments] = useState<Apartment[]>([])
   const [buildings, setBuildings] = useState<Building[]>([])
   const [incidents, setIncidents] = useState<Incident[]>([])
+  const [pendingCleanings, setPendingCleanings] = useState(0)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
 
@@ -43,13 +44,14 @@ export function Dashboard() {
     const quiet = silent === true
     if (!quiet) { setLoading(true); setLoadError(false) }
     try {
-      const [to, ga, sh, ap, bl, inc] = await Promise.all([fetchToOrder(), fetchApartmentGaps(), fetchShortageEvents(), fetchApartmentsAdmin(), fetchBuildings(), fetchAllIncidents()])
+      const [to, ga, sh, ap, bl, inc, pc] = await Promise.all([fetchToOrder(), fetchApartmentGaps(), fetchShortageEvents(), fetchApartmentsAdmin(), fetchBuildings(), fetchAllIncidents(), fetchPendingCleanings().catch(() => [])])
       setToOrder(to)
       setGaps(ga)
       setShortages(sh)
       setApartments(ap)
       setBuildings(bl)
       setIncidents(inc)
+      setPendingCleanings(pc.length)
     } catch {
       if (!quiet) setLoadError(true)
     } finally {
@@ -124,6 +126,7 @@ export function Dashboard() {
     { label: t.admin.dashboard.toOrder, count: toOrder.length, icon: TrendingDown, tone: 'text-bad', to: '/admin/stock?below=1' },
     { label: t.admin.dashboard.gaps, count: incompleteCount, icon: Boxes, tone: 'text-warn', to: '/admin/apartments' },
     { label: t.admin.dashboard.pendingIncidents, count: pendingIncidents, icon: ClipboardList, tone: 'text-accent', to: '/admin/more/incidents' },
+    { label: t.admin.dashboard.pendingCleanings, count: pendingCleanings, icon: CheckCheck, tone: 'text-accent', to: '/admin/more/cleaning-approvals' },
     { label: t.admin.dashboard.unprocessedShortages, count: shortages.length, icon: AlertTriangle, tone: 'text-bad', to: '/admin/stock' },
   ]
 

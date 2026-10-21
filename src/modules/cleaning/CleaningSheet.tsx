@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { fetchNorms, fetchStaff } from '@/modules/apartments/api'
+import { fetchApartment } from '@/modules/qr/api'
+import { WhatsappNotify } from '@/components/WhatsappNotify'
+import { useNotifyContacts, cleaningMessage } from '@/lib/whatsappNotify'
 import { completeCleaning, queueCleaningOffline, isNetworkError } from '@/modules/cleaning/api'
 import { useAuth } from '@/modules/core/store'
 import type { SvNorm, SvStaff, NormType, CleaningResult } from '@/lib/database.types'
@@ -21,6 +24,8 @@ export function CleaningSheet({ backTo }: { backTo?: string }) {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const profile = useAuth((s) => s.profile)
+  const notifyContacts = useNotifyContacts()
+  const [notifyText, setNotifyText] = useState<string | null>(null)
   const aptId = Number(id)
   const goBack = useCallback(() => navigate(backTo ?? `/sv/apartments/${aptId}`), [navigate, backTo, aptId])
   const [norms, setNorms] = useState<SvNorm[]>([])
@@ -216,8 +221,20 @@ export function CleaningSheet({ backTo }: { backTo?: string }) {
       const res = await completeCleaning(params)
       setResult(res)
       if (res.duplicate) setError(t.cleaning.duplicate)
-      const timer = setTimeout(() => goBack(), 1200)
-      setGoBackTimer(timer)
+      if (notifyContacts.length > 0 && !res.duplicate) {
+        const apt = await fetchApartment(aptId).catch(() => null)
+        setNotifyText(cleaningMessage({
+          code: apt?.code ?? `#${aptId}`,
+          building: apt?.building,
+          author: profile?.full_name ?? null,
+          staff: staff.filter((st) => selectedStaff.includes(st.id)).map((st) => st.full_name),
+          note: note.trim() || null,
+          pending: !!res.pending,
+        }))
+      } else {
+        const timer = setTimeout(() => goBack(), res.pending ? 2500 : 1200)
+        setGoBackTimer(timer)
+      }
     } catch (e) {
       if (isNetworkError(e)) {
         try {
@@ -357,7 +374,7 @@ export function CleaningSheet({ backTo }: { backTo?: string }) {
           {result && !result.duplicate && (
             <div className="flex items-center gap-2 bg-ok-soft border border-line rounded-xl px-3 py-2.5">
               <Check className="w-4 h-4 text-ok" />
-              <p className="text-sm text-ok">{t.cleaning.success}</p>
+              <p className="text-sm text-ok">{result.pending ? t.cleaning.pendingApproval : t.cleaning.success}</p>
             </div>
           )}
           {offline && (
@@ -366,6 +383,7 @@ export function CleaningSheet({ backTo }: { backTo?: string }) {
               <p className="text-sm text-warn">{t.cleaning.pending}</p>
             </div>
           )}
+          {notifyText && <WhatsappNotify contacts={notifyContacts} text={notifyText} />}
           {result?.shortages && result.shortages.length > 0 && (
             <div className="bg-warn-soft border border-line rounded-xl px-3 py-2.5">
               <p className="text-sm font-medium text-warn mb-1">{t.cleaning.shortages}</p>
@@ -374,6 +392,9 @@ export function CleaningSheet({ backTo }: { backTo?: string }) {
           )}
         </div>
         <div className="sticky bottom-0 bg-surface border-t border-line px-5 py-3 flex gap-3">
+          {notifyText ? (
+            <button onClick={goBack} className="flex-1 bg-accent text-white rounded-xl py-3.5 min-h-[48px] font-medium">{t.notify.done}</button>
+          ) : (<>
           <button onClick={goBack} className="flex-1 bg-app text-ink rounded-xl py-3.5 min-h-[48px] font-medium">{t.cleaning.cancel}</button>
           <button
             onClick={handleConfirm}
@@ -382,6 +403,7 @@ export function CleaningSheet({ backTo }: { backTo?: string }) {
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
             {t.cleaning.confirm}
           </button>
+          </>)}
         </div>
       </div>
       {confirmClose && (

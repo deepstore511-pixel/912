@@ -10,7 +10,9 @@ import { ErrorState } from '@/components/ErrorState'
 import { resolveMime, isHeicFile } from '@/lib/files'
 import { compressImage } from '@/lib/compress'
 import { currentDict } from '@/i18n'
-import { Camera, Video as VideoIcon, X, Loader as Loader2, TriangleAlert as AlertTriangle } from 'lucide-react'
+import { WhatsappNotify } from '@/components/WhatsappNotify'
+import { useNotifyContacts, incidentMessage } from '@/lib/whatsappNotify'
+import { Camera, Check, Video as VideoIcon, X, Loader as Loader2, TriangleAlert as AlertTriangle } from 'lucide-react'
 
 const MAX_FILES = 6
 const MAX_FILE_SIZE = 50 * 1024 * 1024
@@ -42,6 +44,8 @@ export function IncidentForm({ backTo }: { backTo?: string }) {
     { value: 'other', label: t.incidents.kindOther },
   ]
   const navigate = useNavigate()
+  const notifyContacts = useNotifyContacts()
+  const [sentText, setSentText] = useState<string | null>(null)
   const [params] = useSearchParams()
   const preselectApt = params.get('apartment') ?? params.get('apt')
   const profile = useAuth((s) => s.profile)
@@ -175,7 +179,18 @@ export function IncidentForm({ backTo }: { backTo?: string }) {
         photoPaths,
         clientOpId: clientOpIdRef.current,
       })
-      if (backTo) navigate(backTo)
+      if (notifyContacts.length > 0) {
+        const apt = apartments.find((a) => a.id === aptId)
+        setSentText(incidentMessage({
+          code: apt?.code ?? `#${aptId}`,
+          building: apt?.building,
+          author: profile?.full_name ?? null,
+          kindLabel: kinds.find((k) => k.value === kind)?.label ?? kind,
+          what: selectedItem?.name ?? freeText.trim(),
+          qty: Number(qty) || 1,
+          comment: comment.trim() || null,
+        }))
+      } else if (backTo) navigate(backTo)
       else navigate('/sv/incidents')
     } catch (e) {
       if (photoPaths.length > 0) {
@@ -204,6 +219,25 @@ export function IncidentForm({ backTo }: { backTo?: string }) {
         <div className="absolute inset-0" onClick={handleClose} />
         <div className="relative bg-surface w-full sm:max-w-md max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-line p-4">
           <ErrorState onRetry={loadReferenceData} />
+        </div>
+      </div>
+    )
+  }
+
+  if (sentText) {
+    const finish = () => {
+      if (backTo) navigate(backTo)
+      else navigate('/sv/incidents')
+    }
+    return (
+      <div className="fixed inset-0 bg-black/40 z-50 flex flex-col justify-end anim-scrim" role="dialog" aria-modal="true" aria-label={t.incidents.title}>
+        <div className="bg-surface rounded-t-2xl px-5 pt-6 pb-6 space-y-3 anim-sheet">
+          <div className="flex items-center gap-2 bg-ok-soft border border-line rounded-xl px-3 py-2.5">
+            <Check className="w-4 h-4 text-ok" />
+            <p className="text-sm text-ok">{t.incidents.success}</p>
+          </div>
+          <WhatsappNotify contacts={notifyContacts} text={sentText} />
+          <button onClick={finish} className="w-full bg-app text-ink rounded-xl py-3.5 min-h-[48px] font-medium">{t.notify.done}</button>
         </div>
       </div>
     )

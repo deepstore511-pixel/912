@@ -93,6 +93,8 @@ export interface Contact {
   has_whatsapp: boolean
   sort: number
   active: boolean
+  /** Admin marked this contact as the recipient of QR app messages. */
+  notify_on_events?: boolean
 }
 
 export interface Incident {
@@ -168,6 +170,8 @@ export interface CleaningResult {
     qty: number
   }>
   duplicate: boolean
+  /** True while the write-off waits for admin confirmation. */
+  pending?: boolean
   shortages: Array<{
     item_id: number
     item: string

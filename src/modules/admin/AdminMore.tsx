@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useI18n } from '@/i18n'
-import { Users, Wrench, Phone, ExternalLink, CircleUser as UserCircle, ChevronRight, ClipboardList, FolderTree, FileText, QrCode, ChartBar as BarChart3, History } from 'lucide-react'
+import { Users, Wrench, Phone, ExternalLink, CircleUser as UserCircle, ChevronRight, ClipboardList, FolderTree, FileText, QrCode, ChartBar as BarChart3, History, BadgeCheck } from 'lucide-react'
 import { useAuth } from '@/modules/core/store'
 
 export function AdminMore() {
@@ -14,6 +14,7 @@ export function AdminMore() {
     { icon: UserCircle, label: t.admin.more.staff, path: '/admin/more/staff' },
     { icon: Users, label: t.admin.more.users, path: '/admin/more/users' },
     { icon: Wrench, label: t.admin.more.incidents, path: '/admin/more/incidents' },
+    { icon: BadgeCheck, label: t.admin.more.cleaningApprovals, path: '/admin/more/cleaning-approvals' },
     { icon: Phone, label: t.admin.more.contacts, path: '/admin/more/contacts' },
     { icon: ClipboardList, label: t.admin.more.normTemplates, path: '/admin/more/norm-templates' },
     { icon: FileText, label: t.admin.more.documents, path: '/admin/more/documents' },

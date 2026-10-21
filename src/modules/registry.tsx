@@ -23,6 +23,7 @@ const AdminMore = lazy(() => import('@/modules/admin/AdminMore').then(m => ({ de
 const StaffPage = lazy(() => import('@/modules/admin/StaffPage').then(m => ({ default: m.StaffPage })))
 const UsersPage = lazy(() => import('@/modules/admin/UsersPage').then(m => ({ default: m.UsersPage })))
 const AdminIncidents = lazy(() => import('@/modules/admin/AdminIncidents').then(m => ({ default: m.AdminIncidents })))
+const AdminCleaningApprovals = lazy(() => import('@/modules/admin/AdminCleaningApprovals').then(m => ({ default: m.AdminCleaningApprovals })))
 const AdminContacts = lazy(() => import('@/modules/admin/AdminContacts').then(m => ({ default: m.AdminContacts })))
 const NormTemplatesPage = lazy(() => import('@/modules/admin/NormTemplatesPage').then(m => ({ default: m.NormTemplatesPage })))
 const CatalogPage = lazy(() => import('@/modules/admin/CatalogPage').then(m => ({ default: m.CatalogPage })))
@@ -81,6 +82,7 @@ export function AdminRoutes() {
           <Route path="more/staff" element={<StaffPage />} />
           <Route path="more/users" element={<UsersPage />} />
           <Route path="more/incidents" element={<AdminIncidents />} />
+          <Route path="more/cleaning-approvals" element={<AdminCleaningApprovals />} />
           <Route path="more/contacts" element={<AdminContacts />} />
           <Route path="more/norm-templates" element={<NormTemplatesPage />} />
           <Route path="more/catalog" element={<CatalogPage />} />

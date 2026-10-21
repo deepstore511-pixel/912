@@ -65,12 +65,12 @@ export function AdminContacts() {
         <ContactEditor
           contact={editing}
           onClose={() => { setEditing(null); setAdding(false) }}
-          onSave={async (name, group, roleTitle, phone, whatsapp, active) => {
+          onSave={async (name, group, roleTitle, phone, whatsapp, active, notify) => {
             try {
               if (editing) {
-                await updateContact(editing.id, { name, group_name: group, role_title: roleTitle, phone_e164: phone, has_whatsapp: whatsapp, active })
+                await updateContact(editing.id, { name, group_name: group, role_title: roleTitle, phone_e164: phone, has_whatsapp: whatsapp, notify_on_events: notify, active })
               } else {
-                await createContact({ name, group_name: group, role_title: roleTitle, phone_e164: phone, has_whatsapp: whatsapp, sort: 0 })
+                await createContact({ name, group_name: group, role_title: roleTitle, phone_e164: phone, has_whatsapp: whatsapp, notify_on_events: notify, sort: 0 })
               }
               toast(t.admin.adminContacts.save, 'success')
               setEditing(null); setAdding(false); load()
@@ -94,7 +94,7 @@ function ContactEditor({
 }: {
   contact: Contact | null
   onClose: () => void
-  onSave: (name: string, group: string | null, roleTitle: string | null, phone: string, whatsapp: boolean, active: boolean) => void
+  onSave: (name: string, group: string | null, roleTitle: string | null, phone: string, whatsapp: boolean, active: boolean, notify: boolean) => void
   onDelete?: () => void
 }) {
   const { t } = useI18n()
@@ -104,6 +104,7 @@ function ContactEditor({
   const [phone, setPhone] = useState(contact?.phone_e164 ?? '+2')
   const [whatsapp, setWhatsapp] = useState(contact?.has_whatsapp ?? true)
   const [active, setActive] = useState(contact?.active ?? true)
+  const [notify, setNotify] = useState(contact?.notify_on_events ?? false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   return (
@@ -134,6 +135,12 @@ function ContactEditor({
             <input type="checkbox" checked={whatsapp} onChange={(e) => setWhatsapp(e.target.checked)} className="w-4 h-4" />
             <span className="text-sm text-ink">{t.admin.adminContacts.whatsapp}</span>
           </label>
+          {whatsapp && (
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} className="w-4 h-4" />
+              <span className="text-sm text-ink">{t.admin.adminContacts.notify}</span>
+            </label>
+          )}
           {contact && (
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} className="w-4 h-4" />
@@ -149,7 +156,7 @@ function ContactEditor({
           )}
           <button onClick={onClose} className="flex-1 bg-app text-ink rounded-xl py-3 font-medium">{t.cleaning.cancel}</button>
           <button
-            onClick={() => onSave(name.trim(), group.trim() || null, roleTitle.trim() || null, phone.trim(), whatsapp, active)}
+            onClick={() => onSave(name.trim(), group.trim() || null, roleTitle.trim() || null, phone.trim(), whatsapp, active, whatsapp && notify)}
             disabled={!name.trim() || !phone.trim()}
             className="flex-1 bg-accent text-white rounded-xl py-3 font-medium disabled:opacity-40 flex items-center justify-center gap-2"
           >

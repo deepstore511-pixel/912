@@ -280,7 +280,7 @@ export async function fetchAllStaff(): Promise<Staff[]> {
 export async function fetchAllContacts(): Promise<Contact[]> {
   const { data, error, status } = await supabase
     .from('contacts')
-    .select('id,group_name,name,role_title,phone_e164,has_whatsapp,sort,active')
+    .select('id,group_name,name,role_title,phone_e164,has_whatsapp,sort,active,notify_on_events')
     .order('sort')
     .order('name')
   if (error) throw toApiError(error, status)
@@ -486,6 +486,68 @@ export async function approveIncident(
   return data as ApproveIncidentResult
 }
 
+// ---- Cleanings waiting for admin confirmation ----
+
+export interface PendingCleaning {
+  id: string
+  apartment_id: number
+  cleaned_at: string
+  created_at: string
+  created_by: string | null
+  lead_staff_id: number | null
+  note: string | null
+}
+
+export interface CleaningPreviewLine {
+  item_id: number
+  item: string
+  norm_type: string
+  qty: number
+}
+
+export interface ApproveCleaningResult {
+  status: string
+  shortages?: Array<{ item_id: number; item: string; location: string; balance: number }>
+}
+
+export async function fetchPendingCleanings(): Promise<PendingCleaning[]> {
+  const { data, error, status } = await supabase
+    .from('cleaning_events')
+    .select('id,apartment_id,cleaned_at,created_at,created_by,lead_staff_id,note')
+    .eq('posting_status', 'pending')
+    .eq('status', 'done')
+    .order('created_at', { ascending: true })
+  if (error) throw toApiError(error, status)
+  return (data ?? []) as PendingCleaning[]
+}
+
+export async function fetchStaffNames(): Promise<Map<number, string>> {
+  const { data, error, status } = await supabase.from('staff').select('id,full_name')
+  if (error) throw toApiError(error, status)
+  const rows = (data ?? []) as Array<{ id: number; full_name: string }>
+  return new Map<number, string>(rows.map((r) => [r.id, r.full_name]))
+}
+
+export async function fetchCleaningPreview(eventId: string): Promise<CleaningPreviewLine[]> {
+  const { data, error, status } = await supabase.rpc('cleaning_preview', { p_event: eventId })
+  if (error) throw toApiError(error, status)
+  return (data ?? []) as CleaningPreviewLine[]
+}
+
+export async function approveCleaning(
+  eventId: string,
+  decision: 'confirm' | 'reject',
+  note: string | null,
+): Promise<ApproveCleaningResult> {
+  const { data, error, status } = await supabase.rpc('approve_cleaning', {
+    p_event: eventId,
+    p_decision: decision,
+    p_note: note,
+  })
+  if (error) throw toApiError(error, status)
+  return data as ApproveCleaningResult
+}
+
 // ---- Staff CRUD (admin_all policy) ----
 
 const PHONE_RE = /^\+[0-9]{8,15}$/
@@ -531,6 +593,7 @@ export async function createContact(params: {
   role_title: string | null
   phone_e164: string
   has_whatsapp: boolean
+  notify_on_events?: boolean
   sort: number
 }): Promise<void> {
   const trimmedName = params.name.trim()
@@ -542,6 +605,7 @@ export async function createContact(params: {
     role_title: params.role_title,
     phone_e164: trimmedPhone,
     has_whatsapp: params.has_whatsapp,
+    notify_on_events: params.notify_on_events ?? false,
     sort: params.sort,
     active: true,
   })
