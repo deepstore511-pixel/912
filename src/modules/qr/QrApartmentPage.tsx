@@ -27,6 +27,7 @@ import {
 } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { CleaningHistoryList } from '@/modules/history/CleaningHistoryList'
+import { QR_HISTORY_ENABLED } from '@/modules/qr/flags'
 import { useLiveRefresh } from '@/lib/realtime'
 
 const normTypeOrder: NormType[] = ['asset_standing', 'turnover_replenish', 'cleaning_consumption']
@@ -314,7 +315,9 @@ export function QrApartmentPage() {
           <TabButton active={tab === 'norms'} onClick={() => setTab('norms')} label={t.qr.whatShouldBe} />
           <TabButton active={tab === 'comments'} onClick={() => setTab('comments')} label={t.qr.comments} />
           <TabButton active={tab === 'whatsapp'} onClick={() => setTab('whatsapp')} label={t.qr.whatsapp} />
-          <TabButton active={tab === 'history'} onClick={() => setTab('history')} label={t.qr.historyTab} />
+          {QR_HISTORY_ENABLED && (
+            <TabButton active={tab === 'history'} onClick={() => setTab('history')} label={t.qr.historyTab} />
+          )}
           <TabButton active={tab === 'incidents'} onClick={() => setTab('incidents')} label={t.qr.incidentsTab} />
         </div>
       </div>
@@ -468,7 +471,7 @@ export function QrApartmentPage() {
           />
         )}
 
-        {tab === 'history' && <CleaningHistoryList apartmentId={aptId} canDelete={false} />}
+        {QR_HISTORY_ENABLED && tab === 'history' && <CleaningHistoryList apartmentId={aptId} canDelete={false} />}
 
         {tab === 'incidents' && (
           <div className="space-y-3">

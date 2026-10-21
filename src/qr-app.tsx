@@ -1,13 +1,14 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { QrLayout } from '@/modules/qr/QrLayout'
 import { QrIndexPage } from '@/modules/qr/QrIndexPage'
 import { QrApartmentPage } from '@/modules/qr/QrApartmentPage'
 import { CleaningSheet } from '@/modules/cleaning/CleaningSheet'
 import { IncidentForm } from '@/modules/incidents/IncidentForm'
 import { QrHistoryPage } from '@/modules/qr/QrHistoryPage'
+import { QR_HISTORY_ENABLED } from '@/modules/qr/flags'
 import { useAuth, setupAuthListener } from '@/modules/core/store'
 import { LoginScreen } from '@/modules/core/AuthScreens'
 import { useI18n, useDocumentDir } from '@/i18n'
@@ -38,6 +39,12 @@ function QrIncidentRoute() {
       <IncidentForm backTo={backTo} />
     </>
   )
+}
+
+/** История отключена флагом QR_HISTORY_ENABLED: ведём на страницу квартиры. */
+function QrHistoryRedirect() {
+  const { id } = useParams<{ id: string }>()
+  return <Navigate to={id ? `/qr/${id}` : '/qr'} replace />
 }
 
 function QrApp() {
@@ -88,7 +95,10 @@ function QrApp() {
           <Route path="/qr/:id" element={<QrLayout><QrApartmentPage /></QrLayout>} />
           <Route path="/qr/:id/clean" element={<QrLayout><QrCleanRoute /></QrLayout>} />
           <Route path="/qr/:id/incident" element={<QrLayout><QrIncidentRoute /></QrLayout>} />
-          <Route path="/qr/:id/history" element={<QrLayout><QrHistoryPage /></QrLayout>} />
+          <Route
+            path="/qr/:id/history"
+            element={QR_HISTORY_ENABLED ? <QrLayout><QrHistoryPage /></QrLayout> : <QrHistoryRedirect />}
+          />
           <Route path="*" element={<Navigate to="/qr" replace />} />
         </Routes>
       </HashRouter>
