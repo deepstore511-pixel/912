@@ -15,6 +15,8 @@ export interface SvCleaningEventRow {
   reverse_reason: string | null
   search_text: string | null
   media_paths: string[] | null
+  /** pending = ждёт подтверждения админа, posted = проведена, rejected = отклонена */
+  posting_status?: 'pending' | 'posted' | 'rejected' | null
 }
 
 export interface SvCleaningEventLineRow {

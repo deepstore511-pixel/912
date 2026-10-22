@@ -133,9 +133,15 @@ export function CleaningHistoryList({ apartmentId, canDelete, onRecalculate, onR
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm font-medium text-ink">{n(formatDateTime(ev.cleaned_at))}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${ev.status === 'done' ? 'bg-ok-soft text-ok' : 'bg-bad-soft text-bad'}`}>
-                  {ev.status === 'done' ? t.admin.apartments.done : t.admin.apartments.reversed}
-                </span>
+                {ev.status === 'done' && ev.posting_status === 'pending' ? (
+                  <span data-testid="cleaning-pending-badge" className="text-xs px-2 py-0.5 rounded-full bg-warn-soft text-warn">
+                    {t.admin.apartments.pendingApproval}
+                  </span>
+                ) : (
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${ev.status === 'done' ? 'bg-ok-soft text-ok' : 'bg-bad-soft text-bad'}`}>
+                    {ev.status === 'done' ? t.admin.apartments.done : t.admin.apartments.reversed}
+                  </span>
+                )}
               </div>
               {ev.lead_staff_name && <p className="text-xs text-muted">{t.cleaning.leadStaff}: {ev.lead_staff_name}</p>}
               {ev.staff_names && <p className="text-xs text-muted">{ev.staff_names}</p>}

@@ -4,7 +4,7 @@ import type { ToOrderRow, ApartmentGapRow, Apartment, Building, AptType, Inciden
 import { useI18n } from '@/i18n'
 import { friendlyMessage } from '@/lib/errors'
 import { toast } from '@/lib/toast'
-import { formatQty } from '@/lib/format'
+import { formatQty, relativeTime } from '@/lib/format'
 import { TriangleAlert as AlertTriangle, TrendingDown, PackageX, ClipboardList, Boxes, Wrench, ArrowDownToLine, Trash2, CircleCheck as CheckCircle2, X, CheckCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { ErrorState } from '@/components/ErrorState'
@@ -14,6 +14,27 @@ function pctColor(p: number): string {
   if (p >= 100) return 'var(--ok)'
   if (p >= 75) return 'var(--warn)'
   return 'var(--bad)'
+}
+
+type BadgeTone = 'ok' | 'warn' | 'bad'
+const OVERDUE_HOURS = 24
+
+const BADGE_CLASS: Record<BadgeTone, string> = {
+  ok: 'bg-ok-soft text-ok',
+  warn: 'bg-warn-soft text-warn',
+  bad: 'bg-bad-soft text-bad',
+}
+
+/** Статус по количеству и возрасту самой старой записи: нет записей / новые / ждут больше суток. */
+function ageStatus(count: number, oldestIso: string | null): 'clear' | 'new' | 'overdue' {
+  if (count === 0) return 'clear'
+  if (oldestIso && Date.now() - new Date(oldestIso).getTime() >= OVERDUE_HOURS * 3600 * 1000) return 'overdue'
+  return 'new'
+}
+
+function oldestOf(dates: string[]): string | null {
+  if (dates.length === 0) return null
+  return dates.reduce((a, b) => (new Date(a).getTime() <= new Date(b).getTime() ? a : b))
 }
 
 function ProgressBar({ value, color, className }: { value: number; color: string; className?: string }) {
@@ -37,6 +58,7 @@ export function Dashboard() {
   const [buildings, setBuildings] = useState<Building[]>([])
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [pendingCleanings, setPendingCleanings] = useState(0)
+  const [oldestPendingCleaning, setOldestPendingCleaning] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
 
@@ -52,6 +74,7 @@ export function Dashboard() {
       setBuildings(bl)
       setIncidents(inc)
       setPendingCleanings(pc.length)
+      setOldestPendingCleaning(oldestOf(pc.map((c) => c.created_at)))
     } catch {
       if (!quiet) setLoadError(true)
     } finally {
@@ -120,14 +143,52 @@ export function Dashboard() {
   }
 
   const incompleteCount = Array.from(gapApartments.values()).filter((a) => a.items.length > 0).length
-  const pendingIncidents = incidents.filter((incident) => incident.status === 'new').length
+  const newIncidents = incidents.filter((incident) => incident.status === 'new')
+  const pendingIncidents = newIncidents.length
+  const oldestIncident = oldestOf(newIncidents.map((incident) => incident.created_at))
 
-  const tiles = [
-    { label: t.admin.dashboard.toOrder, count: toOrder.length, icon: TrendingDown, tone: 'text-bad', to: '/admin/stock?below=1' },
-    { label: t.admin.dashboard.gaps, count: incompleteCount, icon: Boxes, tone: 'text-warn', to: '/admin/apartments' },
-    { label: t.admin.dashboard.pendingIncidents, count: pendingIncidents, icon: ClipboardList, tone: 'text-accent', to: '/admin/more/incidents' },
-    { label: t.admin.dashboard.pendingCleanings, count: pendingCleanings, icon: CheckCheck, tone: 'text-accent', to: '/admin/more/cleaning-approvals' },
-    { label: t.admin.dashboard.unprocessedShortages, count: shortages.length, icon: AlertTriangle, tone: 'text-bad', to: '/admin/stock' },
+  const ageBadge = (count: number, oldest: string | null): { text: string; tone: BadgeTone } => {
+    const s = ageStatus(count, oldest)
+    if (s === 'clear') return { text: t.admin.dashboard.statusClear, tone: 'ok' }
+    if (s === 'overdue') return { text: t.admin.dashboard.statusOverdue, tone: 'bad' }
+    return { text: t.admin.dashboard.statusNew, tone: 'warn' }
+  }
+
+  const cards: Array<{
+    key: string; label: string; count: number; icon: typeof TrendingDown; to: string
+    badge: { text: string; tone: BadgeTone }; hint?: string
+  }> = [
+    {
+      key: 'incidents', label: t.admin.dashboard.pendingIncidents, count: pendingIncidents, icon: ClipboardList,
+      to: '/admin/more/incidents', badge: ageBadge(pendingIncidents, oldestIncident),
+      hint: oldestIncident ? `${t.admin.dashboard.oldest}: ${relativeTime(oldestIncident)}` : undefined,
+    },
+    {
+      key: 'cleanings', label: t.admin.dashboard.pendingCleanings, count: pendingCleanings, icon: CheckCheck,
+      to: '/admin/more/cleaning-approvals', badge: ageBadge(pendingCleanings, oldestPendingCleaning),
+      hint: oldestPendingCleaning ? `${t.admin.dashboard.oldest}: ${relativeTime(oldestPendingCleaning)}` : undefined,
+    },
+    {
+      key: 'shortages', label: t.admin.dashboard.unprocessedShortages, count: shortages.length, icon: AlertTriangle,
+      to: '/admin/stock',
+      badge: shortages.length === 0
+        ? { text: t.admin.dashboard.statusClear, tone: 'ok' }
+        : { text: t.admin.dashboard.statusUnprocessed, tone: 'bad' },
+    },
+    {
+      key: 'toOrder', label: t.admin.dashboard.toOrder, count: toOrder.length, icon: TrendingDown,
+      to: '/admin/stock?below=1',
+      badge: toOrder.length === 0
+        ? { text: t.admin.dashboard.statusClear, tone: 'ok' }
+        : { text: t.admin.dashboard.statusNeedOrder, tone: 'bad' },
+    },
+    {
+      key: 'gaps', label: t.admin.dashboard.gaps, count: incompleteCount, icon: Boxes,
+      to: '/admin/apartments',
+      badge: incompleteCount === 0
+        ? { text: t.admin.dashboard.statusClear, tone: 'ok' }
+        : { text: t.admin.dashboard.statusIncomplete, tone: 'warn' },
+    },
   ]
 
   return (
@@ -142,12 +203,24 @@ export function Dashboard() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mb-5">
-        {tiles.map(({ label, count, icon: Icon, tone, to }) => (
-          <button key={label} onClick={() => navigate(to)} className="bg-surface border border-line rounded-xl px-3.5 py-3 text-left transition-colors hover:border-accent">
-            <Icon className={`w-5 h-5 ${tone} mb-2`} />
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 mb-5">
+        {cards.map(({ key, label, count, icon: Icon, to, badge, hint }) => (
+          <button
+            key={key}
+            data-testid={`dash-card-${key}`}
+            onClick={() => navigate(to)}
+            className="bg-surface border border-line rounded-xl px-3.5 py-3 text-left transition-colors hover:border-accent"
+            style={badge.tone === 'bad' ? { borderColor: 'var(--bad)' } : undefined}
+          >
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <Icon className="w-5 h-5 text-muted shrink-0" />
+              <span className={`text-[11px] leading-tight px-2 py-0.5 rounded-full font-medium text-center ${BADGE_CLASS[badge.tone]}`}>
+                {badge.text}
+              </span>
+            </div>
             <b className="text-2xl font-semibold text-ink block">{n(String(count))}</b>
-            <span className="text-muted text-xs">{label}</span>
+            <span className="text-muted text-xs block">{label}</span>
+            {hint && <span className="text-muted text-[11px] block mt-1">{hint}</span>}
           </button>
         ))}
       </div>

@@ -18,7 +18,7 @@ export interface PagedResult<T> {
 function buildCleaningQuery(apartmentId: number | null, filters: CleaningHistoryFilters, from: number) {
   let q = supabase
     .from('sv_cleaning_events')
-    .select('id,apartment_id,cleaned_at,status,note,staff_names,revision,lead_staff_name,author_name,reversed_at,reversed_by_name,reverse_reason,search_text,media_paths', { count: 'exact' })
+    .select('id,apartment_id,cleaned_at,status,note,staff_names,revision,lead_staff_name,author_name,reversed_at,reversed_by_name,reverse_reason,search_text,media_paths,posting_status', { count: 'exact' })
     .order('cleaned_at', { ascending: false })
     .order('id', { ascending: false })
     .range(from, from + PAGE_SIZE - 1)

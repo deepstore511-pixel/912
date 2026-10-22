@@ -97,9 +97,15 @@ export function CleaningDetailSheet({ event, canDelete, onClose, onDeleted, onRe
         <div className="px-5 py-4 space-y-4">
           <div>
             <span className="text-sm font-medium text-ink">{n(formatDateTime(event.cleaned_at))}</span>
-            <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${event.status === 'done' ? 'bg-ok-soft text-ok' : 'bg-bad-soft text-bad'}`}>
-              {event.status === 'done' ? t.admin.apartments.done : t.admin.apartments.reversed}
-            </span>
+            {event.status === 'done' && event.posting_status === 'pending' ? (
+              <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-warn-soft text-warn">
+                {t.admin.apartments.pendingApproval}
+              </span>
+            ) : (
+              <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${event.status === 'done' ? 'bg-ok-soft text-ok' : 'bg-bad-soft text-bad'}`}>
+                {event.status === 'done' ? t.admin.apartments.done : t.admin.apartments.reversed}
+              </span>
+            )}
           </div>
           {event.author_name && <DetailRow label={t.qr.detailAuthor} value={event.author_name} />}
           {event.lead_staff_name && <DetailRow label={t.cleaning.leadStaff} value={event.lead_staff_name} />}
@@ -161,7 +167,7 @@ export function CleaningDetailSheet({ event, canDelete, onClose, onDeleted, onRe
             </button>
           )}
 
-          {event.status === 'done' && onRecalculate && (
+          {event.status === 'done' && event.posting_status !== 'pending' && onRecalculate && (
             <button
               onClick={() => onRecalculate(event.id)}
               className="w-full bg-app text-ink rounded-xl py-3 font-medium text-sm flex items-center justify-center gap-2 border border-line"
