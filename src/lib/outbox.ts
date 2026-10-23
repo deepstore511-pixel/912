@@ -1,6 +1,6 @@
 import { get, update, del as idbDel, set as idbSet } from 'idb-keyval'
 import { supabase } from '@/lib/supabase'
-import { toApiError } from '@/lib/errors'
+import { toApiError, type ApiError } from '@/lib/errors'
 import { toast } from '@/lib/toast'
 import { currentDict } from '@/i18n'
 import { resolveMime, extForMime } from '@/lib/files'
@@ -60,6 +60,22 @@ async function removeMediaBlobs(entryId: string): Promise<void> {
 
 function safeMediaStatus(e: OutboxEntry): MediaStatus {
   return e.mediaStatus ?? 'none'
+}
+
+const MEDIA_AUTH_PATTERNS = /jwt|exp claim|unauthori[sz]ed|not authenticated/i
+
+// Auth error on media upload: keep the file, refresh the session, retry later
+function isMediaAuthError(e: ApiError): boolean {
+  return e.isAuth || e.status === 401 || MEDIA_AUTH_PATTERNS.test(e.message)
+}
+
+async function refreshSessionOk(): Promise<boolean> {
+  try {
+    const { data: { session } } = await supabase.auth.refreshSession()
+    return !!session
+  } catch {
+    return false
+  }
 }
 
 export async function getOutboxSummary(userId: string): Promise<{ pending: number; failed: number; mediaFailed: number; mediaPending: number }> {
@@ -306,6 +322,17 @@ export async function flushOutbox(userId: string): Promise<void> {
         } catch (mediaErr) {
           const apiError = toApiError(mediaErr)
           const newMediaAttempts = entry.mediaAttempts + 1
+          if (isMediaAuthError(apiError)) {
+            const refreshed = await refreshSessionOk()
+            if (!refreshed) toast(currentDict().errors.auth, 'error')
+            await updateOutboxEntry(entry.id, (e) => {
+              e.mediaAttempts = newMediaAttempts
+              e.mediaError = apiError.message
+              if (newMediaAttempts >= MAX_MEDIA_ATTEMPTS) e.mediaStatus = 'failed'
+            })
+            notify()
+            break
+          }
           if (apiError.isNetwork || (apiError.status != null && apiError.status >= 500)) {
             if (newMediaAttempts >= MAX_MEDIA_ATTEMPTS) {
               await updateOutboxEntry(entry.id, (e) => {
