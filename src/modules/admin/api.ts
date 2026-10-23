@@ -31,6 +31,7 @@ import type {
   RecalculateCleaningResult,
   ApproveIncidentResult,
   NormalizedShortageEvent,
+  AptType,
 } from '@/lib/database.types'
 
 // ---- Queries ----
@@ -210,6 +211,36 @@ export async function fetchBuildings(): Promise<Building[]> {
     .order('name')
   if (error) throw toApiError(error, status)
   return data ?? []
+}
+
+export async function createBuilding(name: string): Promise<Building> {
+  const { data, error, status } = await supabase
+    .from('buildings')
+    .insert({ name })
+    .select('id,name')
+    .single()
+  if (error) throw toApiError(error, status)
+  return data as Building
+}
+
+export async function createApartment(input: {
+  buildingId: number
+  buildingName: string
+  number: string
+  type: AptType
+}): Promise<Apartment> {
+  const { data, error, status } = await supabase
+    .from('apartments')
+    .insert({
+      building_id: input.buildingId,
+      number: input.number,
+      code: `${input.buildingName}/${input.number}`,
+      type: input.type,
+    })
+    .select('id,building_id,number,code,type,status,created_at')
+    .single()
+  if (error) throw toApiError(error, status)
+  return data as Apartment
 }
 
 export async function fetchNormRules(apartmentId: number): Promise<NormRuleRow[]> {

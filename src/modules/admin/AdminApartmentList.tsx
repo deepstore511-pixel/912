@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchApartmentsAdmin, fetchApartmentGaps, fetchBuildings } from '@/modules/admin/api'
+import { fetchApartmentsAdmin, fetchApartmentGaps, fetchBuildings, createApartment, createBuilding } from '@/modules/admin/api'
 import type { Apartment, Building, ApartmentGapRow, AptType } from '@/lib/database.types'
 import { useI18n } from '@/i18n'
-import { Search } from 'lucide-react'
+import { Search, Plus, X, Loader as Loader2 } from 'lucide-react'
 import { ErrorState } from '@/components/ErrorState'
 import { friendlyMessage } from '@/lib/errors'
+import { toast, errorMessage } from '@/lib/toast'
 import { useLiveRefresh } from '@/lib/realtime'
 
 function pctColor(p: number): string {
@@ -41,6 +42,7 @@ export function AdminApartmentList() {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [showAdd, setShowAdd] = useState(false)
 
   const load = (silent?: boolean) => {
     const quiet = silent === true
@@ -98,7 +100,16 @@ export function AdminApartmentList() {
 
   return (
     <div className="px-4 pt-5 pb-28 lg:px-0 lg:pt-0">
-      <h1 className="text-xl font-semibold text-ink mb-4">{t.admin.apartments.title}</h1>
+      <div className="flex items-center gap-3 mb-4">
+        <h1 className="text-xl font-semibold text-ink">{t.admin.apartments.title}</h1>
+        <button
+          onClick={() => setShowAdd(true)}
+          className="ml-auto bg-accent text-white rounded-lg px-3.5 py-2 text-sm font-medium flex items-center gap-1.5 transition-opacity hover:opacity-90"
+        >
+          <Plus className="w-4 h-4" />
+          {t.admin.apartments.add}
+        </button>
+      </div>
 
       <div className="flex gap-2.5 mb-4">
         <div className="relative flex-1">
@@ -152,6 +163,114 @@ export function AdminApartmentList() {
       {grouped.length === 0 && (
         <div className="px-4 py-6 text-center text-muted text-sm">{t.common.noResults}</div>
       )}
+      {showAdd && (
+        <AddApartmentModal
+          buildings={buildings}
+          typeLabels={typeLabels}
+          onClose={() => setShowAdd(false)}
+          onCreated={(id) => { setShowAdd(false); load(true); navigate(`/admin/apartments/${id}`) }}
+        />
+      )}
+    </div>
+  )
+}
+
+const NEW_BUILDING = 'new'
+
+function AddApartmentModal({ buildings, typeLabels, onClose, onCreated }: {
+  buildings: Building[]
+  typeLabels: Record<AptType, string>
+  onClose: () => void
+  onCreated: (id: number) => void
+}) {
+  const { t } = useI18n()
+  const [buildingId, setBuildingId] = useState<string>(buildings[0] ? String(buildings[0].id) : NEW_BUILDING)
+  const [newBuilding, setNewBuilding] = useState('')
+  const [number, setNumber] = useState('')
+  const [type, setType] = useState<AptType>('studio')
+  const [createdBuilding, setCreatedBuilding] = useState<Building | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  const isNew = buildingId === NEW_BUILDING
+  const num = number.trim()
+  const bName = createdBuilding
+    ? createdBuilding.name
+    : isNew ? newBuilding.trim() : (buildings.find((b) => String(b.id) === buildingId)?.name ?? '')
+  const valid = bName.length > 0 && bName.length <= 20 && num.length > 0 && num.length <= 20 && !num.includes('/')
+
+  const save = async () => {
+    if (!valid || saving) return
+    setSaving(true)
+    try {
+      let building = createdBuilding
+      if (!building && isNew) {
+        building = await createBuilding(bName)
+        setCreatedBuilding(building)
+      }
+      const bid = building ? building.id : Number(buildingId)
+      const apt = await createApartment({ buildingId: bid, buildingName: bName, number: num, type })
+      toast(t.admin.apartments.created, 'success')
+      onCreated(apt.id)
+    } catch (e) {
+      toast(errorMessage(e), 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-6">
+      <div className="bg-surface rounded-2xl w-full max-w-sm p-5 border border-line">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-semibold text-ink">{t.admin.apartments.addTitle}</h3>
+          <button onClick={onClose}><X className="w-5 h-5 text-muted" /></button>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm text-ink mb-1">{t.admin.apartments.building}</label>
+            <select
+              value={createdBuilding ? String(createdBuilding.id) : buildingId}
+              onChange={(e) => setBuildingId(e.target.value)}
+              disabled={!!createdBuilding}
+              className="w-full bg-app rounded-xl px-4 py-2.5 text-sm focus:outline-none"
+            >
+              {buildings.map((b) => <option key={b.id} value={String(b.id)}>{b.name}</option>)}
+              {createdBuilding && <option value={String(createdBuilding.id)}>{createdBuilding.name}</option>}
+              <option value={NEW_BUILDING}>{t.admin.apartments.newBuilding}</option>
+            </select>
+          </div>
+          {isNew && !createdBuilding && (
+            <div>
+              <label className="block text-sm text-ink mb-1">{t.admin.apartments.buildingName}</label>
+              <input value={newBuilding} onChange={(e) => setNewBuilding(e.target.value)} maxLength={20} className="w-full bg-app rounded-xl px-4 py-2.5 text-sm focus:outline-none" />
+            </div>
+          )}
+          <div>
+            <label className="block text-sm text-ink mb-1">{t.admin.apartments.number}</label>
+            <input value={number} onChange={(e) => setNumber(e.target.value)} maxLength={20} className="w-full bg-app rounded-xl px-4 py-2.5 text-sm focus:outline-none" />
+          </div>
+          <div>
+            <label className="block text-sm text-ink mb-1">{t.admin.apartments.type}</label>
+            <select value={type} onChange={(e) => setType(e.target.value as AptType)} className="w-full bg-app rounded-xl px-4 py-2.5 text-sm focus:outline-none">
+              {typeOrder.map((tp) => <option key={tp} value={tp}>{typeLabels[tp]}</option>)}
+            </select>
+          </div>
+          {valid && (
+            <p className="text-xs text-muted">{t.admin.apartments.code}: <b className="text-ink">{bName}/{num}</b></p>
+          )}
+        </div>
+        <div className="flex gap-3 mt-4">
+          <button onClick={onClose} className="flex-1 bg-app text-ink rounded-xl py-3 font-medium">{t.cleaning.cancel}</button>
+          <button
+            onClick={save}
+            disabled={!valid || saving}
+            className="flex-1 bg-accent text-white rounded-xl py-3 font-medium disabled:opacity-40 flex items-center justify-center gap-2"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {t.admin.apartments.create}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
