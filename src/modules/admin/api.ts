@@ -470,6 +470,11 @@ export async function recalculateCleaning(
   return data as RecalculateCleaningResult
 }
 
+export async function takeIncident(incidentId: string): Promise<void> {
+  const { error, status } = await supabase.rpc('take_incident', { p_incident: incidentId })
+  if (error) throw toApiError(error, status)
+}
+
 export async function approveIncident(
   incidentId: string,
   decision: 'confirm' | 'reject',

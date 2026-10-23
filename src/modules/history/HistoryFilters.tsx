@@ -57,6 +57,7 @@ export function HistoryFilters(props: Props) {
   if (props.type === 'incident' && props.status) {
     const labels: Record<IncidentStatus, string> = {
       new: t.incidents.statusNew,
+      in_progress: t.incidents.statusInProgress,
       confirmed: t.incidents.statusConfirmed,
       rejected: t.incidents.statusRejected,
     }
@@ -199,6 +200,7 @@ export function HistoryFilters(props: Props) {
                 >
                   <option value="">{t.history.all}</option>
                   <option value="new">{t.incidents.statusNew}</option>
+                  <option value="in_progress">{t.incidents.statusInProgress}</option>
                   <option value="confirmed">{t.incidents.statusConfirmed}</option>
                   <option value="rejected">{t.incidents.statusRejected}</option>
                 </select>

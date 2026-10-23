@@ -8,7 +8,7 @@ export type LocType = 'warehouse' | 'apartment' | 'holder' | 'sink' | 'source'
 export type NormType = 'asset_standing' | 'turnover_replenish' | 'cleaning_consumption'
 export type EventStatus = 'done' | 'reversed'
 export type IncidentKind = 'breakdown' | 'broken' | 'lost' | 'other'
-export type IncidentStatus = 'new' | 'confirmed' | 'rejected'
+export type IncidentStatus = 'new' | 'in_progress' | 'confirmed' | 'rejected'
 export type DocType = 'receipt' | 'issue' | 'writeoff' | 'inventory'
 export type DocStatus = 'draft' | 'posted' | 'void'
 

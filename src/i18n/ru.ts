@@ -100,6 +100,7 @@ export const ru = {
     statusNew: 'Новая',
     statusConfirmed: 'Подтверждена',
     statusRejected: 'Отклонена',
+    statusInProgress: 'В работе',
     noIncidents: 'Заявок нет',
     photoError: 'Ошибка загрузки файла',
     mediaError: 'Неподдерживаемый формат (нужен JPEG/PNG/WebP/MP4/MOV/WebM)',
@@ -585,6 +586,8 @@ export const ru = {
       force: 'Списать принудительно',
       noIncidents: 'Заявок нет',
       approved: 'Заявка подтверждена',
+      take: 'Взять в работу',
+      taken: 'Заявка взята в работу',
       rejected: 'Заявка отклонена',
     },
     adminContacts: {

@@ -919,6 +919,7 @@ function kindLabel(kind: IncidentKind, t: ReturnType<typeof useI18n>['t']): stri
 function statusLabel(status: IncidentStatus, t: ReturnType<typeof useI18n>['t']): string {
   switch (status) {
     case 'new': return t.incidents.statusNew
+    case 'in_progress': return t.incidents.statusInProgress
     case 'confirmed': return t.incidents.statusConfirmed
     default: return t.incidents.statusRejected
   }
@@ -927,6 +928,7 @@ function statusLabel(status: IncidentStatus, t: ReturnType<typeof useI18n>['t'])
 function statusColor(status: IncidentStatus): string {
   switch (status) {
     case 'new': return 'bg-warn-soft text-warn'
+    case 'in_progress': return 'bg-accent-soft text-accent'
     case 'confirmed': return 'bg-ok-soft text-ok'
     default: return 'bg-bad-soft text-bad'
   }

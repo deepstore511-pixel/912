@@ -101,12 +101,14 @@ export function IncidentHistoryList({ apartmentId, canDelete, refreshKey }: Prop
   }
   const statusDisplay: Record<IncidentStatus, string> = {
     new: t.incidents.statusNew,
+    in_progress: t.incidents.statusInProgress,
     confirmed: t.incidents.statusConfirmed,
     rejected: t.incidents.statusRejected,
   }
 
   const statusColors: Record<IncidentStatus, string> = {
     new: 'bg-warn-soft text-warn',
+    in_progress: 'bg-accent-soft text-accent',
     confirmed: 'bg-ok-soft text-ok',
     rejected: 'bg-bad-soft text-bad',
   }

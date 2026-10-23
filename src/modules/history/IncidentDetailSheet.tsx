@@ -37,6 +37,7 @@ export function IncidentDetailSheet({ incident, canDelete, onClose, onDeleted }:
   }
   const statusLabels: Record<IncidentStatus, string> = {
     new: t.incidents.statusNew,
+    in_progress: t.incidents.statusInProgress,
     confirmed: t.incidents.statusConfirmed,
     rejected: t.incidents.statusRejected,
   }
@@ -88,6 +89,7 @@ export function IncidentDetailSheet({ incident, canDelete, onClose, onDeleted }:
             <span className="text-sm font-medium text-ink">{n(formatDateTime(incident.created_at))}</span>
             <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${
               incident.status === 'new' ? 'bg-warn-soft text-warn' :
+              incident.status === 'in_progress' ? 'bg-accent-soft text-accent' :
               incident.status === 'confirmed' ? 'bg-ok-soft text-ok' : 'bg-bad-soft text-bad'
             }`}>
               {statusLabels[incident.status]}

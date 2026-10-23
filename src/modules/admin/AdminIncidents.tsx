@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { fetchAllIncidents, approveIncident } from '@/modules/admin/api'
+import { fetchAllIncidents, approveIncident, takeIncident } from '@/modules/admin/api'
 import { fetchApartmentsAdmin } from '@/modules/admin/api'
 import type { Incident, Apartment, IncidentStatus, IncidentKind } from '@/lib/database.types'
 import { useI18n } from '@/i18n'
@@ -13,6 +13,7 @@ import { useLiveRefresh } from '@/lib/realtime'
 
 const statusColors: Record<IncidentStatus, string> = {
   new: 'bg-warn-soft text-warn',
+  in_progress: 'bg-accent-soft text-accent',
   confirmed: 'bg-ok-soft text-ok',
   rejected: 'bg-bad-soft text-bad',
 }
@@ -28,6 +29,7 @@ export function AdminIncidents() {
   const { t, n } = useI18n()
   const statusLabels: Record<IncidentStatus, string> = {
     new: t.incidents.statusNew,
+    in_progress: t.incidents.statusInProgress,
     confirmed: t.incidents.statusConfirmed,
     rejected: t.incidents.statusRejected,
   }
@@ -45,6 +47,7 @@ export function AdminIncidents() {
   const [note, setNote] = useState('')
   const [force, setForce] = useState(false)
   const [processing, setProcessing] = useState(false)
+  const [takingId, setTakingId] = useState<string | null>(null)
   const [selected, setSelected] = useState<Incident | null>(null)
   const [authorName, setAuthorName] = useState<string | null>(null)
   const [resolverName, setResolverName] = useState<string | null>(null)
@@ -90,6 +93,19 @@ export function AdminIncidents() {
       toast(errorMessage(e), 'error')
     } finally {
       setProcessing(false)
+    }
+  }
+
+  const handleTake = async (id: string) => {
+    setTakingId(id)
+    try {
+      await takeIncident(id)
+      toast(t.admin.adminIncidents.taken, 'success')
+      setIncidents(await fetchAllIncidents())
+    } catch (e) {
+      toast(errorMessage(e), 'error')
+    } finally {
+      setTakingId(null)
     }
   }
 
@@ -142,8 +158,18 @@ export function AdminIncidents() {
                     <ChevronRight className="w-4 h-4 text-muted shrink-0 mt-1" />
                   </div>
                 </button>
-                {inc.status === 'new' && (
+                {(inc.status === 'new' || inc.status === 'in_progress') && (
                   <div className="flex gap-2 mt-2 pl-12">
+                    {inc.status === 'new' && (
+                      <button
+                        onClick={() => handleTake(inc.id)}
+                        disabled={takingId === inc.id}
+                        className="text-xs bg-accent-soft text-accent rounded-lg px-3 py-1.5 flex items-center gap-1.5 disabled:opacity-40"
+                      >
+                        {takingId === inc.id ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                        {t.admin.adminIncidents.take}
+                      </button>
+                    )}
                     <button
                       onClick={() => { setActionIncident({ incident: inc, decision: 'confirm' }); setNote(''); setForce(false) }}
                       className="text-xs bg-ok-soft text-ok rounded-lg px-3 py-1.5 flex items-center gap-1.5"

@@ -16,6 +16,7 @@ const kindIcons: Record<IncidentKind, React.ComponentType<{ className?: string }
 
 const statusColors: Record<IncidentStatus, string> = {
   new: 'bg-warn-soft text-warn',
+  in_progress: 'bg-accent-soft text-accent',
   confirmed: 'bg-ok-soft text-ok',
   rejected: 'bg-bad-soft text-bad',
 }
@@ -32,6 +33,7 @@ function kindLabel(kind: IncidentKind, t: ReturnType<typeof useI18n>['t']): stri
 function statusLabel(status: IncidentStatus, t: ReturnType<typeof useI18n>['t']): string {
   switch (status) {
     case 'new': return t.incidents.statusNew
+    case 'in_progress': return t.incidents.statusInProgress
     case 'confirmed': return t.incidents.statusConfirmed
     default: return t.incidents.statusRejected
   }

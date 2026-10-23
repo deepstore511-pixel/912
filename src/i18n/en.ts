@@ -102,6 +102,7 @@ export const en: Dict = {
     statusNew: 'New',
     statusConfirmed: 'Confirmed',
     statusRejected: 'Rejected',
+    statusInProgress: 'In progress',
     noIncidents: 'No requests',
     photoError: 'File upload error',
     mediaError: 'Unsupported format (need JPEG/PNG/WebP/MP4/MOV/WebM)',
@@ -587,6 +588,8 @@ export const en: Dict = {
       force: 'Force write-off',
       noIncidents: 'No requests',
       approved: 'Request confirmed',
+      take: 'Take on',
+      taken: 'Request taken on',
       rejected: 'Request rejected',
     },
     adminContacts: {

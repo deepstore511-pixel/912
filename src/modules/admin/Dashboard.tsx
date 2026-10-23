@@ -146,6 +146,7 @@ export function Dashboard() {
   const newIncidents = incidents.filter((incident) => incident.status === 'new')
   const pendingIncidents = newIncidents.length
   const oldestIncident = oldestOf(newIncidents.map((incident) => incident.created_at))
+  const inProgressIncidents = incidents.filter((incident) => incident.status === 'in_progress').length
 
   const ageBadge = (count: number, oldest: string | null): { text: string; tone: BadgeTone } => {
     const s = ageStatus(count, oldest)
@@ -161,7 +162,10 @@ export function Dashboard() {
     {
       key: 'incidents', label: t.admin.dashboard.pendingIncidents, count: pendingIncidents, icon: ClipboardList,
       to: '/admin/more/incidents', badge: ageBadge(pendingIncidents, oldestIncident),
-      hint: oldestIncident ? `${t.admin.dashboard.oldest}: ${relativeTime(oldestIncident)}` : undefined,
+      hint: [
+        oldestIncident ? `${t.admin.dashboard.oldest}: ${relativeTime(oldestIncident)}` : '',
+        inProgressIncidents > 0 ? `${t.incidents.statusInProgress}: ${n(String(inProgressIncidents))}` : '',
+      ].filter(Boolean).join(' · ') || undefined,
     },
     {
       key: 'cleanings', label: t.admin.dashboard.pendingCleanings, count: pendingCleanings, icon: CheckCheck,

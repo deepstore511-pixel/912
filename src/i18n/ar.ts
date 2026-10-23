@@ -103,6 +103,7 @@ export const ar: Dict = {
     statusNew: 'جديد',
     statusConfirmed: 'مؤكد',
     statusRejected: 'مرفوض',
+    statusInProgress: 'قيد التنفيذ',
     noIncidents: 'مفيش طلبات',
     photoError: 'غلط في تحميل الملف',
     mediaError: 'صيغة مش مدعومة (لازم JPEG/PNG/WebP/MP4/MOV/WebM)',
@@ -588,6 +589,8 @@ export const ar: Dict = {
       force: 'خصم إجباري',
       noIncidents: 'مفيش طلبات',
       approved: 'الطلب اتأكد',
+      take: 'ابدأ التنفيذ',
+      taken: 'الطلب بقى قيد التنفيذ',
       rejected: 'الطلب اترفض',
     },
     adminContacts: {
