@@ -13,11 +13,11 @@ import {
 } from '@/modules/admin/api'
 import type { Category, Item, ItemKind, BaseUnit, Supplier } from '@/lib/database.types'
 import { useI18n } from '@/i18n'
-import { toast, errorMessage } from '@/lib/toast'
+import { toast } from '@/lib/toast'
 import { Plus, Trash2, CreditCard as Edit3, X, Check, ChevronRight, ChevronDown, Package, Folder } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ErrorState } from '@/components/ErrorState'
-import { friendlyMessage } from '@/lib/errors'
+import { friendlyMessage, friendlyMessage as errorMessage } from '@/lib/errors'
 import { useLiveRefresh } from '@/lib/realtime'
 
 const baseUnitOptions: BaseUnit[] = ['pcs', 'g', 'ml']
@@ -408,14 +408,14 @@ function ItemEditor({
           category_id: categoryId,
           name: name.trim(),
           base_unit: baseUnit,
-          pack_size: Number(packSize) || 1,
+          pack_size: Number(packSize),
           pack_label: packLabel.trim() || t.common.units.pcs,
           min_stock: minStock.trim() ? Number(minStock) : null,
           track_on_hand: trackOnHand,
           active: item ? active : undefined,
           supplier_id: supplierId,
         })}
-        disabled={!name.trim()}
+        disabled={!name.trim() || !(Number(packSize) > 0) || (minStock.trim() !== '' && !(Number(minStock) >= 0))}
       />
     </Modal>
   )

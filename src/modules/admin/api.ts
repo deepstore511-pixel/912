@@ -714,15 +714,12 @@ export async function updateCategory(id: number, patch: Partial<Pick<Category, '
 }
 
 export async function deleteCategory(id: number): Promise<void> {
-  const { data: items, error: itemsError, status: itemsStatus } = await supabase
+  const { count, error: itemsError, status: itemsStatus } = await supabase
     .from('items')
     .select('id', { head: true, count: 'exact' })
     .eq('category_id', id)
   if (itemsError) throw toApiError(itemsError, itemsStatus)
-  if ((items ?? []).length > 0 || (items as unknown as { count?: number }).count) {
-    const { count } = await supabase.from('items').select('id', { head: true, count: 'exact' }).eq('category_id', id)
-    if ((count ?? 0) > 0) throw toApiError(new Error(currentDict().categoryHasItems))
-  }
+  if ((count ?? 0) > 0) throw toApiError(new Error(currentDict().categoryHasItems))
   const { error, status } = await supabase.from('categories').delete().eq('id', id)
   if (error) throw toApiError(error, status)
 }

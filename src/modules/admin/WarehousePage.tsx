@@ -173,9 +173,9 @@ export function WarehousePage() {
                           </td>
                           <td className="px-2.5 py-2.5 border-b border-line">
                             <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
-                              item.below_min ? 'bg-bad-soft text-bad' : 'bg-ok-soft text-ok'
+                              item.below_min ? 'bg-bad-soft text-bad' : item.min_stock == null ? 'bg-app text-muted' : 'bg-ok-soft text-ok'
                             }`}>
-                              {item.below_min ? t.admin.stock.belowMin : t.admin.dashboard.noToOrder}
+                              {item.below_min ? t.admin.stock.belowMin : item.min_stock == null ? t.admin.stock.noMin : t.admin.dashboard.noToOrder}
                             </span>
                           </td>
                         </tr>
