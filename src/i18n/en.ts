@@ -192,6 +192,10 @@ export const en: Dict = {
     kitchen: 'Kitchen',
     bathroom: 'Bathroom',
     balcony: 'Balcony',
+    createNew: 'Not in the list? Create a new item',
+    pickExisting: 'Pick from the list',
+    newItemName: 'New item name',
+    noAssetCategories: 'No categories of type "Inventory". Create one in More → Categories and items.',
   },
   errors: {
     network: 'No connection to server',

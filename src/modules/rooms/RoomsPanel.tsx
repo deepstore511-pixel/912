@@ -8,7 +8,8 @@ import { friendlyMessage } from '@/lib/errors'
 import { unitLabel } from '@/lib/format'
 import { useLiveRefresh } from '@/lib/realtime'
 import { fetchNormCatalog, type NormCatalogItem } from '@/modules/admin/norms'
-import type { AptType, ApartmentRoomRow, BaseUnit, Room } from '@/lib/database.types'
+import { fetchCategories, createItem } from '@/modules/admin/api'
+import type { AptType, ApartmentRoomRow, BaseUnit, Category, Room } from '@/lib/database.types'
 import { fetchRooms, fetchApartmentRoomRows, saveRoomNorm, saveRoomStock, removeFromRoom } from './api'
 
 interface Props {
@@ -54,6 +55,7 @@ export function RoomsPanel({ apartmentId, aptType, canEdit, totals }: Props) {
   const [rooms, setRooms] = useState<Room[]>([])
   const [rows, setRows] = useState<ApartmentRoomRow[]>([])
   const [catalog, setCatalog] = useState<NormCatalogItem[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [filter, setFilter] = useState<RoomFilter>('all')
@@ -73,9 +75,10 @@ export function RoomsPanel({ apartmentId, aptType, canEdit, totals }: Props) {
   useLiveRefresh(['rooms', 'room_norms', 'room_stock', 'apartments', 'items'], () => load(true))
 
   useEffect(() => {
-    if (!editing || !canEdit || catalog.length > 0) return
-    fetchNormCatalog().then(setCatalog).catch((e) => toast(errorMessage(e), 'error'))
-  }, [editing, canEdit, catalog.length])
+    if (!editing || !canEdit) return
+    if (catalog.length === 0) fetchNormCatalog().then(setCatalog).catch((e) => toast(errorMessage(e), 'error'))
+    if (categories.length === 0) fetchCategories().then(setCategories).catch((e) => toast(errorMessage(e), 'error'))
+  }, [editing, canEdit, catalog.length, categories.length])
 
   const visible = useMemo(() => rows.filter((r) => r.norm > 0 || r.actual > 0), [rows])
   const itemSums = useMemo(() => {
@@ -99,15 +102,29 @@ export function RoomsPanel({ apartmentId, aptType, canEdit, totals }: Props) {
     setEditing({ roomId: filter, itemId: null, itemName: '', unit: '', norm0: 0, actual0: 0 })
   }
 
-  const handleSave = async (p: { itemId: number; norm: number; actual: number; forType: boolean }) => {
+  const handleSave = async (p: { itemId: number | null; newItem: { name: string; categoryId: number } | null; norm: number; actual: number; forType: boolean }) => {
     if (!editing) return
     setSaving(true)
     try {
+      let itemId = p.itemId
+      if (p.newItem) {
+        itemId = await createItem({
+          category_id: p.newItem.categoryId,
+          name: p.newItem.name,
+          base_unit: 'pcs',
+          pack_size: 1,
+          pack_label: t.common.units.pcs,
+          min_stock: null,
+          track_on_hand: false,
+        })
+        setCatalog([])
+      }
+      if (itemId === null) return
       if (p.norm !== editing.norm0 || p.forType) {
-        await saveRoomNorm({ apartmentId, aptType, roomId: editing.roomId, itemId: p.itemId, qty: p.norm, forType: p.forType })
+        await saveRoomNorm({ apartmentId, aptType, roomId: editing.roomId, itemId, qty: p.norm, forType: p.forType })
       }
       if (p.actual !== editing.actual0) {
-        await saveRoomStock({ apartmentId, roomId: editing.roomId, itemId: p.itemId, qty: p.actual })
+        await saveRoomStock({ apartmentId, roomId: editing.roomId, itemId, qty: p.actual })
       }
       toast(t.rooms.saved, 'success')
       setEditing(null)
@@ -221,6 +238,7 @@ export function RoomsPanel({ apartmentId, aptType, canEdit, totals }: Props) {
           state={editing}
           roomName={roomLabel(rooms.find((r) => r.id === editing.roomId)?.name ?? '')}
           catalog={catalog}
+          categories={categories}
           takenItemIds={new Set(visible.filter((r) => r.room_id === editing.roomId).map((r) => r.item_id))}
           canForType={aptType !== null}
           saving={saving}
@@ -243,14 +261,15 @@ export function RoomsPanel({ apartmentId, aptType, canEdit, totals }: Props) {
   )
 }
 
-function RoomEditor({ state, roomName, catalog, takenItemIds, canForType, saving, onSave, onRemove, onClose }: {
+function RoomEditor({ state, roomName, catalog, categories, takenItemIds, canForType, saving, onSave, onRemove, onClose }: {
   state: EditState
   roomName: string
   catalog: NormCatalogItem[]
+  categories: Category[]
   takenItemIds: Set<number>
   canForType: boolean
   saving: boolean
-  onSave: (p: { itemId: number; norm: number; actual: number; forType: boolean }) => void
+  onSave: (p: { itemId: number | null; newItem: { name: string; categoryId: number } | null; norm: number; actual: number; forType: boolean }) => void
   onRemove: () => void
   onClose: () => void
 }) {
@@ -261,18 +280,24 @@ function RoomEditor({ state, roomName, catalog, takenItemIds, canForType, saving
   const [normStr, setNormStr] = useState(String(state.norm0))
   const [actualStr, setActualStr] = useState(String(state.actual0))
   const [forType, setForType] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newCategoryId, setNewCategoryId] = useState<number | null>(null)
+  const assetCategories = categories.filter((c) => c.kind === 'asset')
+  const categoryId = newCategoryId ?? assetCategories[0]?.id ?? null
 
   const normVal = parseQty(normStr)
   const actualVal = parseQty(actualStr)
   const hasData = (normVal ?? 0) > 0 || (actualVal ?? 0) > 0
-  const valid = itemId !== null && normVal !== null && actualVal !== null && (isEdit || hasData)
+  const itemOk = creating ? newName.trim().length > 0 && categoryId !== null : itemId !== null
+  const valid = itemOk && normVal !== null && actualVal !== null && (isEdit || hasData)
 
   const items = useMemo(() => {
     const q = search.toLowerCase().trim()
     return catalog.filter((i) => i.kind === 'asset' && i.active && !takenItemIds.has(i.id) && (!q || i.name.toLowerCase().includes(q)))
   }, [catalog, search, takenItemIds])
   const selected = catalog.find((i) => i.id === itemId)
-  const unit = selected ? unitLabel(selected.base_unit as BaseUnit) : state.unit
+  const unit = creating ? t.common.units.pcs : selected ? unitLabel(selected.base_unit as BaseUnit) : state.unit
 
   const inputCls = 'w-full bg-app rounded-xl px-4 py-2.5 text-sm focus:outline-none'
 
@@ -291,17 +316,33 @@ function RoomEditor({ state, roomName, catalog, takenItemIds, canForType, saving
             {isEdit ? (
               <p className="text-sm text-ink">{state.itemName}</p>
             ) : (
-              <>
-                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t.rooms.searchItem} className={inputCls} />
-                <select
-                  value={itemId ?? ''}
-                  onChange={(e) => setItemId(e.target.value ? Number(e.target.value) : null)}
-                  className={`${inputCls} mt-2`}
-                >
-                  <option value="">—</option>
-                  {items.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-                </select>
-              </>
+              creating ? (
+                <>
+                  <input value={newName} onChange={(e) => setNewName(e.target.value)} maxLength={100} placeholder={t.rooms.newItemName} className={inputCls} />
+                  <select
+                    value={categoryId ?? ''}
+                    onChange={(e) => setNewCategoryId(Number(e.target.value))}
+                    className={`${inputCls} mt-2`}
+                  >
+                    {assetCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  {assetCategories.length === 0 && <p className="text-xs text-warn mt-1">{t.rooms.noAssetCategories}</p>}
+                  <button type="button" onClick={() => setCreating(false)} className="mt-2 text-xs text-accent">{t.rooms.pickExisting}</button>
+                </>
+              ) : (
+                <>
+                  <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t.rooms.searchItem} className={inputCls} />
+                  <select
+                    value={itemId ?? ''}
+                    onChange={(e) => setItemId(e.target.value ? Number(e.target.value) : null)}
+                    className={`${inputCls} mt-2`}
+                  >
+                    <option value="">—</option>
+                    {items.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+                  </select>
+                  <button type="button" onClick={() => setCreating(true)} className="mt-2 text-xs text-accent">{t.rooms.createNew}</button>
+                </>
+              )
             )}
           </div>
           <div className="flex gap-3">
@@ -328,7 +369,13 @@ function RoomEditor({ state, roomName, catalog, takenItemIds, canForType, saving
             </button>
           )}
           <button
-            onClick={() => valid && onSave({ itemId: itemId as number, norm: normVal as number, actual: actualVal as number, forType })}
+            onClick={() => valid && onSave({
+              itemId: creating ? null : itemId,
+              newItem: creating && categoryId !== null ? { name: newName.trim(), categoryId } : null,
+              norm: normVal as number,
+              actual: actualVal as number,
+              forType,
+            })}
             disabled={!valid || saving}
             className="flex-1 bg-accent text-white rounded-xl py-3 font-medium disabled:opacity-40 flex items-center justify-center gap-2"
           >

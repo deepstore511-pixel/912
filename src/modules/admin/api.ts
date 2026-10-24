@@ -746,9 +746,14 @@ export async function createItem(params: {
   min_stock: number | null
   track_on_hand: boolean
   supplier_id?: number | null
-}): Promise<void> {
-  const { error, status } = await supabase.from('items').insert({ ...params, active: true, sort: 0 })
+}): Promise<number> {
+  const { data, error, status } = await supabase
+    .from('items')
+    .insert({ ...params, active: true, sort: 0 })
+    .select('id')
+    .single()
   if (error) throw toApiError(error, status)
+  return (data as { id: number }).id
 }
 
 export async function updateItem(id: number, patch: Partial<Pick<Item, 'name' | 'category_id' | 'base_unit' | 'pack_size' | 'pack_label' | 'min_stock' | 'track_on_hand' | 'active' | 'supplier_id'>>): Promise<void> {

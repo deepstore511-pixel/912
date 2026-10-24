@@ -193,6 +193,10 @@ export const ar: Dict = {
     kitchen: 'المطبخ',
     bathroom: 'الحمّام',
     balcony: 'البلكونة',
+    createNew: 'مش في القايمة؟ اعمل غرض جديد',
+    pickExisting: 'اختار من القايمة',
+    newItemName: 'اسم الغرض الجديد',
+    noAssetCategories: 'مفيش فئات من نوع "جرد". اعمل واحدة من المزيد ← الفئات والأصناف.',
   },
   errors: {
     network: 'مفيش اتصال بالسيرفر',
