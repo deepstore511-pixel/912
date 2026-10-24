@@ -29,10 +29,11 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { CleaningHistoryList } from '@/modules/history/CleaningHistoryList'
 import { QR_HISTORY_ENABLED } from '@/modules/qr/flags'
 import { useLiveRefresh } from '@/lib/realtime'
+import { RoomsPanel } from '@/modules/rooms/RoomsPanel'
 
 const normTypeOrder: NormType[] = ['asset_standing', 'turnover_replenish', 'cleaning_consumption']
 
-type Tab = 'norms' | 'comments' | 'whatsapp' | 'history' | 'incidents'
+type Tab = 'norms' | 'rooms' | 'comments' | 'whatsapp' | 'history' | 'incidents'
 type DetailType = 'note' | 'incident'
 
 interface DetailState {
@@ -313,6 +314,7 @@ export function QrApartmentPage() {
         </div>
         <div className="flex px-4 gap-1 overflow-x-auto">
           <TabButton active={tab === 'norms'} onClick={() => setTab('norms')} label={t.qr.whatShouldBe} />
+          <TabButton active={tab === 'rooms'} onClick={() => setTab('rooms')} label={t.rooms.tab} />
           <TabButton active={tab === 'comments'} onClick={() => setTab('comments')} label={t.qr.comments} />
           <TabButton active={tab === 'whatsapp'} onClick={() => setTab('whatsapp')} label={t.qr.whatsapp} />
           {QR_HISTORY_ENABLED && (
@@ -370,6 +372,10 @@ export function QrApartmentPage() {
               )
             })}
           </div>
+        )}
+
+        {tab === 'rooms' && (
+          <RoomsPanel apartmentId={aptId} aptType={apartment.type} canEdit={false} />
         )}
 
         {tab === 'comments' && (

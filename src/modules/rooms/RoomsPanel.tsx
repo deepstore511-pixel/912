@@ -139,7 +139,7 @@ export function RoomsPanel({ apartmentId, aptType, canEdit, totals }: Props) {
   if (loadError) return <ErrorState onRetry={() => load()} />
 
   const chip = (active: boolean) =>
-    `shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm border ${active ? 'bg-accent text-white border-accent' : 'bg-surface text-ink border-line'}`
+    `shrink-0 whitespace-nowrap min-h-[40px] rounded-full px-3 py-1.5 text-sm border ${active ? 'bg-accent text-white border-accent' : 'bg-surface text-ink border-line'}`
 
   return (
     <div>
