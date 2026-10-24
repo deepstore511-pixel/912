@@ -766,6 +766,30 @@ export async function deleteItem(id: number): Promise<void> {
   if (error) throw toApiError(error, status)
 }
 
+export async function fetchItemStockSummary(
+  itemId: number,
+): Promise<{ warehouse: number; apartments: number; holders: number; total: number }> {
+  const [bal, locs] = await Promise.all([
+    supabase.from('stock_balance').select('loc_id,qty').eq('item_id', itemId),
+    supabase.from('locations').select('id,type').in('type', ['warehouse', 'apartment', 'holder']),
+  ])
+  if (bal.error) throw toApiError(bal.error, bal.status)
+  if (locs.error) throw toApiError(locs.error, locs.status)
+  const typeOf = new Map<number, string>(
+    ((locs.data ?? []) as { id: number; type: string }[]).map((l) => [l.id, l.type]),
+  )
+  const sum = { warehouse: 0, apartments: 0, holders: 0 }
+  for (const r of (bal.data ?? []) as { loc_id: number; qty: number | string }[]) {
+    const q = Number(r.qty)
+    if (!(q > 0)) continue
+    const type = typeOf.get(r.loc_id)
+    if (type === 'warehouse') sum.warehouse += q
+    else if (type === 'apartment') sum.apartments += q
+    else if (type === 'holder') sum.holders += q
+  }
+  return { ...sum, total: sum.warehouse + sum.apartments + sum.holders }
+}
+
 export async function itemHasHistory(itemId: number): Promise<boolean> {
   const [moves, norms, poLines, invLines] = await Promise.all([
     supabase.from('stock_moves').select('id', { head: true, count: 'exact' }).eq('item_id', itemId),

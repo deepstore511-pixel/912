@@ -10,6 +10,7 @@ import {
   updateItem,
   deleteItem,
   itemHasHistory,
+  fetchItemStockSummary,
 } from '@/modules/admin/api'
 import type { Category, Item, ItemKind, BaseUnit, Supplier } from '@/lib/database.types'
 import { useI18n } from '@/i18n'
@@ -19,6 +20,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ErrorState } from '@/components/ErrorState'
 import { friendlyMessage, friendlyMessage as errorMessage } from '@/lib/errors'
 import { useLiveRefresh } from '@/lib/realtime'
+import { unitLabel } from '@/lib/format'
 
 const baseUnitOptions: BaseUnit[] = ['pcs', 'g', 'ml']
 export function CatalogPage() {
@@ -38,6 +40,12 @@ export function CatalogPage() {
   const [addingItem, setAddingItem] = useState<number | null>(null)
   const [deleteCatTarget, setDeleteCatTarget] = useState<number | null>(null)
   const [deleteItemTarget, setDeleteItemTarget] = useState<number | null>(null)
+  const [deactivateTarget, setDeactivateTarget] = useState<{
+    id: number
+    unit: string
+    params: Parameters<typeof updateItem>[1]
+    stock: { warehouse: number; apartments: number; holders: number }
+  } | null>(null)
 
   const load = (silent?: boolean) => {
     const quiet = silent === true
@@ -181,6 +189,29 @@ export function CatalogPage() {
         />
       )}
 
+      {deactivateTarget && (
+        <ConfirmDialog
+          open={true}
+          tone="warn"
+          title={t.admin.catalog.deactivateTitle}
+          message={`${t.admin.catalog.stockWarehouse}: ${n(String(deactivateTarget.stock.warehouse))}, ${t.admin.catalog.stockApartments}: ${n(String(deactivateTarget.stock.apartments))}, ${t.admin.catalog.stockHolders}: ${n(String(deactivateTarget.stock.holders))} ${deactivateTarget.unit}. ${t.admin.catalog.deactivateBody}`}
+          confirmLabel={t.admin.catalog.deactivateConfirm}
+          cancelLabel={t.cleaning.cancel}
+          onConfirm={async () => {
+            const target = deactivateTarget
+            setDeactivateTarget(null)
+            try {
+              await updateItem(target.id, target.params)
+              toast(t.admin.catalog.save, 'success')
+              setEditingItem(null)
+              setAddingItem(null)
+              load()
+            } catch (e) { toast(errorMessage(e), 'error') }
+          }}
+          onCancel={() => setDeactivateTarget(null)}
+        />
+      )}
+
       {deleteItemTarget !== null && (
         <ConfirmDialog
           open={true}
@@ -233,6 +264,13 @@ export function CatalogPage() {
           onSave={async (params) => {
             try {
               if (editingItem?.item) {
+                if (editingItem.item.active && params.active === false) {
+                  const stock = await fetchItemStockSummary(editingItem.item.id)
+                  if (stock.total > 0) {
+                    setDeactivateTarget({ id: editingItem.item.id, unit: unitLabel(editingItem.item.base_unit), params, stock })
+                    return
+                  }
+                }
                 await updateItem(editingItem.item.id, params)
               } else {
                 await createItem(params)
