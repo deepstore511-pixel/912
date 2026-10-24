@@ -6,14 +6,15 @@ import { useAuth } from '@/modules/core/store'
 import { useI18n } from '@/i18n'
 import { formatDateTime, isToday, formatQty } from '@/lib/format'
 import { toast } from '@/lib/toast'
-import { ArrowLeft, Wrench, Sparkles, ClipboardList, Send, CircleCheck as CheckCircle2, History } from 'lucide-react'
+import { ArrowLeft, Wrench, Sparkles, ClipboardList, Send, CircleCheck as CheckCircle2, History, Boxes } from 'lucide-react'
 import { ErrorState } from '@/components/ErrorState'
 import { friendlyMessage } from '@/lib/errors'
 import { CleaningHistoryList } from '@/modules/history/CleaningHistoryList'
 import { IncidentHistoryList } from '@/modules/history/IncidentHistoryList'
 import { useLiveRefresh } from '@/lib/realtime'
+import { RoomsPanel } from '@/modules/rooms/RoomsPanel'
 
-type Tab = 'norms' | 'comments' | 'cleaning' | 'incidents'
+type Tab = 'norms' | 'rooms' | 'comments' | 'cleaning' | 'incidents'
 
 const normTypeOrder: NormType[] = ['asset_standing', 'turnover_replenish', 'cleaning_consumption']
 
@@ -103,8 +104,9 @@ export function ApartmentDetail() {
               : t.apartments.noCleaning}
           </span>
         </div>
-        <div className="flex px-4 gap-1">
+        <div className="flex px-4 gap-1 overflow-x-auto">
           <TabButton active={tab === 'norms'} onClick={() => setTab('norms')} icon={ClipboardList} label={t.apartments.norms} />
+          <TabButton active={tab === 'rooms'} onClick={() => setTab('rooms')} icon={Boxes} label={t.rooms.tab} />
           <TabButton active={tab === 'comments'} onClick={() => setTab('comments')} icon={Sparkles} label={t.apartments.comments} />
           <TabButton active={tab === 'cleaning'} onClick={() => setTab('cleaning')} icon={History} label={t.admin.apartments.cleaningHistory} />
           <TabButton active={tab === 'incidents'} onClick={() => setTab('incidents')} icon={Wrench} label={t.history.incidentsTab} />
@@ -135,6 +137,10 @@ export function ApartmentDetail() {
               )
             })}
           </div>
+        )}
+
+        {tab === 'rooms' && (
+          <RoomsPanel apartmentId={aptId} aptType={apartment.type} canEdit={false} />
         )}
 
         {tab === 'comments' && (
@@ -198,7 +204,7 @@ function TabButton({ active, onClick, icon: Icon, label }: { active: boolean; on
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 px-3 py-2.5 text-sm border-b-2 transition-colors ${active ? 'border-accent text-accent font-medium' : 'border-transparent text-muted'}`}
+      className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3 py-2.5 text-sm border-b-2 transition-colors ${active ? 'border-accent text-accent font-medium' : 'border-transparent text-muted'}`}
     >
       <Icon className="w-4 h-4" />
       {label}

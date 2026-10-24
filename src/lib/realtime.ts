@@ -12,6 +12,7 @@ export const LIVE_TABLES = [
   'cleaning_events', 'cleaning_event_staff', 'cleaning_event_lines', 'incidents', 'contacts',
   'documents', 'stock_moves', 'locations', 'suppliers', 'inventories', 'inventory_lines',
   'purchase_orders', 'purchase_order_lines', 'events',
+  'rooms', 'room_norms', 'room_stock',
 ] as const
 
 const DEBOUNCE_MS = 400

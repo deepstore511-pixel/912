@@ -14,15 +14,16 @@ import type { Apartment, ApartmentGapRow, NormRuleRow, Staff, IssueMissingResult
 import { useI18n } from '@/i18n'
 import { cairoLocalToISO } from '@/lib/format'
 import { toast, errorMessage } from '@/lib/toast'
-import { ClipboardList, History, Gift, X, Loader as Loader2, Wrench } from 'lucide-react'
+import { ClipboardList, History, Gift, X, Loader as Loader2, Wrench, Boxes } from 'lucide-react'
 import { ErrorState } from '@/components/ErrorState'
 import { friendlyMessage } from '@/lib/errors'
 import { CleaningHistoryList } from '@/modules/history/CleaningHistoryList'
 import { IncidentHistoryList } from '@/modules/history/IncidentHistoryList'
 import { NormsTab } from './NormsTab'
+import { RoomsPanel } from '@/modules/rooms/RoomsPanel'
 import { useLiveRefresh } from '@/lib/realtime'
 
-type Tab = 'norms' | 'cleaning' | 'incidents'
+type Tab = 'norms' | 'rooms' | 'cleaning' | 'incidents'
 
 function pctColor(p: number): string {
   if (p >= 100) return 'var(--ok)'
@@ -107,6 +108,7 @@ export function AdminApartmentDetail() {
   useLiveRefresh(['apartments', 'norm_rules', 'staff', 'items', 'cleaning_events', 'stock_moves'], () => loadAll({ silent: true }))
 
   const gapItems = useMemo(() => gaps.filter((g) => g.gap > 0), [gaps])
+  const roomTotals = useMemo(() => new Map(gaps.map((g) => [g.item_id, Number(g.actual)])), [gaps])
 
   const handleIssueAll = async () => {
     setIssuing(true)
@@ -212,8 +214,9 @@ export function AdminApartmentDetail() {
             )}
 
             {/* Tabs */}
-            <div className="flex gap-1 mt-5 border-b border-line">
+            <div className="flex gap-1 mt-5 border-b border-line overflow-x-auto">
               <TabButton active={tab === 'norms'} onClick={() => setTab('norms')} icon={ClipboardList} label={t.admin.apartments.norms} />
+              <TabButton active={tab === 'rooms'} onClick={() => setTab('rooms')} icon={Boxes} label={t.rooms.tab} />
               <TabButton active={tab === 'cleaning'} onClick={() => setTab('cleaning')} icon={History} label={t.admin.apartments.cleaningHistory} />
               <TabButton active={tab === 'incidents'} onClick={() => setTab('incidents')} icon={Wrench} label={t.history.incidentsTab} />
             </div>
@@ -227,6 +230,13 @@ export function AdminApartmentDetail() {
                 apartments={allApartments}
                 onReload={() => loadAll({ silent: true })}
               />
+            )}
+
+            {/* Rooms tab */}
+            {tab === 'rooms' && (
+              <div className="mt-4">
+                <RoomsPanel apartmentId={aptId} aptType={apartment.type} canEdit={true} totals={roomTotals} />
+              </div>
             )}
 
             {/* Cleaning history tab */}
@@ -377,7 +387,7 @@ function TabButton({ active, onClick, icon: Icon, label }: { active: boolean; on
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 px-3 py-2.5 text-sm border-b-2 transition-colors ${active ? 'border-accent text-accent font-medium' : 'border-transparent text-muted'}`}
+      className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3 py-2.5 text-sm border-b-2 transition-colors ${active ? 'border-accent text-accent font-medium' : 'border-transparent text-muted'}`}
     >
       <Icon className="w-4 h-4" />
       {label}

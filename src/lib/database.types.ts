@@ -116,6 +116,27 @@ export interface Incident {
   client_op_id: string | null
 }
 
+export interface Room {
+  id: number
+  name: string
+  sort: number
+  active: boolean
+}
+
+export interface ApartmentRoomRow {
+  apartment_id: number
+  room_id: number
+  room_name: string
+  room_sort: number
+  item_id: number
+  item_name: string
+  base_unit: BaseUnit
+  pack_label: string | null
+  norm: number
+  actual: number
+  gap: number
+}
+
 export interface SvApartment {
   id: number
   code: string
